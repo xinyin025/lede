@@ -5,7 +5,7 @@
 #
 # Copyright (C) 2020 KFERMercer
 #
-name: OpenWrt-CI
+name: 极路由3
 
 on:
   #schedule:
@@ -14,6 +14,12 @@ on:
     # types: [published]
   watch:
     types: started
+
+env:
+ SSH_ACTIONS: false
+ TZ: Asia/Shanghai
+ DIY_SH: diy.sh
+ UPLOAD_WERANSFER: true
 
 jobs:
 
@@ -51,9 +57,76 @@ jobs:
           sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
+      
+      - name: Custom Theme
+        run: |
+           cd package
+           mkdir openwrt-packages
+           cd openwrt-packages
+           git clone https://github.com/openwrt-develop/luci-theme-atmaterial.git
+           git clone https://github.com/Ameykyl/luci-app-koolproxyR
+           git clone https://github.com/rosywrt/luci-theme-rosy
 
       - name: Generate configuration file
-        run: make defconfig
+        run: |
+          rm -f ./.config*
+          touch ./.config
+          chmod +x $DIY_SH
+          ./$DIY_SH
+          
+          #
+          # ========================固件定制部分========================
+          
+          # 编译极路由3固件:
+          cat >> .config <<EOF
+          CONFIG_TARGET_ramips=y
+          CONFIG_TARGET_ramips_mt7620=y
+          CONFIG_TARGET_ramips_mt7620_DEVICE_hiwifi_hc5861=y
+          EOF
+          # 常用LuCI插件选择: 添加外面的主题和应用，包是通过diy.sh 脚本进行下载。
+          cat >> .config <<EOF
+          CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Trojan=y
+          CONFIG_PACKAGE_luci-app-wol=n
+          CONFIG_PACKAGE_luci-app-upnp=n
+          CONFIG_PACKAGE_luci-app-accesscontrol=n
+          CONFIG_PACKAGE_luci-app-ddns=n
+          CONFIG_PACKAGE_luci-app-filetransfer=n
+          CONFIG_PACKAGE_luci-app-unblockneteasemusic-mini=n
+          CONFIG_PACKAGE_luci-app-vsftpd=n
+          CONFIG_PACKAGE_luci-app-vlmcsd=n
+          CONFIG_PACKAGE_luci-app-zerotier=n
+          CONFIG_PACKAGE_luci-app-koolproxyR=y
+          CONFIG_PACKAGE_luci-theme-argon=y
+          CONFIG_PACKAGE_luci-app-adbyby-plus=y
+          CONFIG_PACKAGE_luci-app-dockers=y
+          CONFIG_PACKAGE_luci-app-frpc=y
+          CONFIG_PACKAGE_luci-app-autoreboot=y
+          CONFIG_PACKAGE_luci-app-frps=y
+          EOF
+          
+          # 关闭ipv6:
+          cat >> .config <<EOF
+          CONFIG_KERNEL_IPV6=n
+          CONFIG_KERNEL_IPV6_MULTIPLE_TABLES=n
+          CONFIG_KERNEL_IPV6_SUBTREES=n
+          CONFIG_KERNEL_IPV6_MROUTE=n
+          CONFIG_IPV6=n
+          EOF
+          
+          # 常用软件包:
+          cat >> .config <<EOF
+          CONFIG_PACKAGE_curl=y
+          CONFIG_PACKAGE_htop=y
+          CONFIG_PACKAGE_screen=y
+          CONFIG_PACKAGE_tree=y
+          CONFIG_PACKAGE_vim-fuller=y
+          CONFIG_PACKAGE_wget=y
+          EOF
+          
+          # ========================固件定制部分结束========================
+          # 
+          sed -i 's/^[ \t]*//g' ./.config
+          make defconfig
 
       - name: Make download
         run: |
