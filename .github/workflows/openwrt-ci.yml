@@ -57,15 +57,6 @@ jobs:
           sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-      
-      - name: Custom Theme
-        run: |
-           cd package
-           mkdir openwrt-packages
-           cd openwrt-packages
-           git clone https://github.com/openwrt-develop/luci-theme-atmaterial.git
-           git clone https://github.com/Ameykyl/luci-app-koolproxyR
-           git clone https://github.com/rosywrt/luci-theme-rosy
 
       - name: Generate configuration file
         run: |
